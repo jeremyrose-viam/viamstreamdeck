@@ -118,6 +118,41 @@ You can update individual keys by specifying the key number and the properties t
 - `method` - Method to call on the component
 - `args` - Array of arguments to pass to the method
 
+#### Updating Keys by Name
+
+Give a key a `name` in its config and `update_display` can address it by that name instead of its position. Keep names unique within a page: if two keys on a page share a name, `update_display` reports it as ambiguous and you address them by number instead. A name that looks like a number is read as a key number. If you later move the key to a different position, nothing that sends updates has to change.
+
+```json
+{
+  "update_display": {
+    "keys": {
+      "water": { "text": "Water: 12", "color": "red" }
+    }
+  }
+}
+```
+
+A key reference is either a key number (`"1"`) or a key name (`"water"`).
+
+#### Updating Keys on a Page
+
+When the config uses [pages](#pages), `update_display` changes the page that is currently showing. Add `page` to change a different page; it is redrawn when you navigate to it.
+
+```json
+{
+  "update_display": {
+    "page": "Refill",
+    "keys": {
+      "water": { "text": "Water: 12", "color": "red" }
+    }
+  }
+}
+```
+
+Updates are made to the running configuration only. They persist until the component is reconfigured, at which point the saved config is used again. With a `keys` list instead of pages, `page` is ignored.
+
+A key can only be added to the page that is showing; on a page that isn't, you can update the keys it already has. On any page, an update that would leave a key the deck can't draw (no `component` or `method`, an unsupported `method`, an unknown `image`) is rejected. A key like that on a page that isn't showing would otherwise sit unnoticed and break the page the next time you navigate to it.
+
 #### Updating Dials
 
 For Stream Decks with dials (like the Stream Deck+), you can update dial configurations:

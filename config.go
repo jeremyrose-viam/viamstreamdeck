@@ -12,6 +12,13 @@ import (
 type KeyConfig struct {
 	Key int
 
+	// Name optionally identifies the key within its page so update_display can
+	// address it without knowing its position. It is only looked at when a key
+	// is addressed by name: a name used by more than one key on a page can't be
+	// addressed (update_display reports it as ambiguous), and a name that looks
+	// like a number is read as a key number. It is never a config error.
+	Name string `json:"name,omitempty"`
+
 	Text      string
 	TextColor string  `json:"text_color"`
 	TextFont  *string `json:"text_font,omitempty"`
@@ -94,6 +101,9 @@ type Config struct {
 }
 
 type UpdateDisplayCommand struct {
+	// Page selects which page Keys are applied to; empty means the page that is
+	// currently showing. Ignored when the config uses a flat keys list.
+	Page       string                            `mapstructure:"page"`
 	Brightness *int                              `mapstructure:"brightness"`
 	Keys       map[string]map[string]interface{} `mapstructure:"keys"`
 	Dials      map[string]map[string]interface{} `mapstructure:"dials"`
