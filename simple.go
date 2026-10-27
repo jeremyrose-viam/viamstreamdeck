@@ -3,6 +3,7 @@ package viamstreamdeck
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -137,6 +138,9 @@ type streamdeckComponent struct {
 	currentPage string
 
 	closed atomic.Int32
+
+	// draw, if set, replaces updateKey in drawKey. Only tests set it.
+	draw func(context.Context, KeyConfig) error
 }
 
 func (sdc *streamdeckComponent) updateBrightness(level int) error {
@@ -611,48 +615,11 @@ func (sdc *streamdeckComponent) handleUpdateDisplay(ctx context.Context, cmd map
 	// Handle key updates
 	if updateCmd.Keys != nil {
 		updatedKeys := []int{}
-		for keyNumStr, keyConfigMap := range updateCmd.Keys {
-			keyNum := 0
-			_, err := fmt.Sscanf(keyNumStr, "%d", &keyNum)
+		for keyRef, keyConfigMap := range updateCmd.Keys {
+			keyNum, err := sdc.updateDisplayKey(ctx, updateCmd.Page, keyRef, keyConfigMap)
 			if err != nil {
-				return nil, fmt.Errorf("invalid key number: %s", keyNumStr)
+				return nil, err
 			}
-
-			// Get existing key config or create new one
-			existingKey, hasExisting := sdc.keys[keyNum]
-			if !hasExisting {
-				existingKey = KeyConfig{Key: keyNum}
-			}
-
-			// Apply updates using shared helper
-			newKey, err := sdc.applyKeyUpdate(existingKey, keyConfigMap)
-			if err != nil {
-				return nil, fmt.Errorf("failed to apply updates to key %d: %w", keyNum, err)
-			}
-			newKey.Key = keyNum
-
-			// Update the key on the device
-			err = sdc.updateKey(ctx, newKey)
-			if err != nil {
-				return nil, fmt.Errorf("failed to update key %d: %w", keyNum, err)
-			}
-
-			// Update internal state
-			sdc.keys[keyNum] = newKey
-
-			// Also update the key in the config array if it exists
-			foundInConfig := false
-			for i := range sdc.conf.Keys {
-				if sdc.conf.Keys[i].Key == keyNum {
-					sdc.conf.Keys[i] = newKey
-					foundInConfig = true
-					break
-				}
-			}
-			if !foundInConfig {
-				sdc.conf.Keys = append(sdc.conf.Keys, newKey)
-			}
-
 			updatedKeys = append(updatedKeys, keyNum)
 		}
 
@@ -710,4 +677,139 @@ func (sdc *streamdeckComponent) handleUpdateDisplay(ctx context.Context, cmd map
 	}
 
 	return updated, nil
+}
+
+// checkDrawable rejects a key that applyKeys would later fail to draw: no
+// component or method, an unknown image or font, or a method other than the
+// ones the module supports.
+func checkDrawable(k KeyConfig) error {
+	if err := k.Validate(); err != nil {
+		return err
+	}
+	if m := k.snakeMethod(); m != "DoCommand" && m != "SetPosition" {
+		return fmt.Errorf("only support DoCommand and SetPosition now, not %s", k.Method)
+	}
+	return nil
+}
+
+// drawKey draws one key on the deck. Tests replace it so update_display can be
+// exercised without a deck attached.
+func (sdc *streamdeckComponent) drawKey(ctx context.Context, k KeyConfig) error {
+	if sdc.draw != nil {
+		return sdc.draw(ctx, k)
+	}
+	return sdc.updateKey(ctx, k)
+}
+
+// locateKey resolves keyRef against keys. keyRef is either a key index ("4") or
+// a key name. It returns the position of the key in keys (-1 if an index has no
+// entry yet) and its key index. An unknown or ambiguous name is an error, and a
+// name that looks like a number is read as a key number.
+func locateKey(keys []KeyConfig, keyRef string) (pos int, keyNum int, err error) {
+	if n, convErr := strconv.Atoi(keyRef); convErr == nil {
+		for i := range keys {
+			if keys[i].Key == n {
+				return i, n, nil
+			}
+		}
+		return -1, n, nil
+	}
+	pos = -1
+	for i := range keys {
+		if keys[i].Name != keyRef {
+			continue
+		}
+		if pos >= 0 {
+			return -1, 0, fmt.Errorf("key name %q is used by more than one key (%d and %d), address one by number", keyRef, keys[pos].Key, keys[i].Key)
+		}
+		pos = i
+	}
+	if pos < 0 {
+		return -1, 0, fmt.Errorf("no key named %q", keyRef)
+	}
+	return pos, keys[pos].Key, nil
+}
+
+// updateDisplayKey applies one key update from update_display and returns the
+// index of the key it changed. keyRef is a key index or a key name.
+//
+// With a pages config the update is written into the target page's keys (page,
+// or the page that is showing if empty) and drawn only if that page is showing,
+// so other pages and the page set are left intact. A key can only be added to
+// the page that is showing, and an update that would leave a key undrawable is
+// rejected. With a flat keys list it updates that list. The caller holds
+// configLock.
+func (sdc *streamdeckComponent) updateDisplayKey(ctx context.Context, page, keyRef string, updates map[string]interface{}) (int, error) {
+	if len(sdc.conf.Pages) == 0 {
+		// A flat keys list has no pages, so page is ignored, as it was before
+		// update_display knew about pages.
+		pos, keyNum, err := locateKey(sdc.conf.Keys, keyRef)
+		if err != nil {
+			return 0, err
+		}
+
+		existingKey, hasExisting := sdc.keys[keyNum]
+		if !hasExisting {
+			existingKey = KeyConfig{Key: keyNum}
+		}
+		newKey, err := sdc.applyKeyUpdate(existingKey, updates)
+		if err != nil {
+			return 0, fmt.Errorf("failed to apply updates to key %d: %w", keyNum, err)
+		}
+		newKey.Key = keyNum
+		if err := sdc.drawKey(ctx, newKey); err != nil {
+			return 0, fmt.Errorf("failed to update key %d: %w", keyNum, err)
+		}
+		sdc.keys[keyNum] = newKey
+		if pos >= 0 {
+			sdc.conf.Keys[pos] = newKey
+		} else {
+			sdc.conf.Keys = append(sdc.conf.Keys, newKey)
+		}
+		return keyNum, nil
+	}
+
+	if page == "" {
+		page = sdc.currentPage
+	}
+	keys, ok := sdc.conf.Pages[page]
+	if !ok {
+		return 0, fmt.Errorf("page %q not found", page)
+	}
+	pos, keyNum, err := locateKey(keys, keyRef)
+	if err != nil {
+		return 0, fmt.Errorf("page %q: %w", page, err)
+	}
+	if pos < 0 && page != sdc.currentPage {
+		return 0, fmt.Errorf("page %q has no key %d: a key can only be added to the page that is showing, or in the config", page, keyNum)
+	}
+
+	existingKey := KeyConfig{Key: keyNum}
+	if pos >= 0 {
+		existingKey = keys[pos]
+	}
+	newKey, err := sdc.applyKeyUpdate(existingKey, updates)
+	if err != nil {
+		return 0, fmt.Errorf("failed to apply updates to key %d: %w", keyNum, err)
+	}
+	newKey.Key = keyNum
+	// A key on a page that isn't showing isn't drawn when it is saved, so check
+	// it here: a bad update left in the config would break the page, and its
+	// remaining keys, the next time someone navigates to it.
+	if err := checkDrawable(newKey); err != nil {
+		return 0, fmt.Errorf("page %q key %d: %w", page, keyNum, err)
+	}
+
+	if page == sdc.currentPage {
+		if err := sdc.drawKey(ctx, newKey); err != nil {
+			return 0, fmt.Errorf("failed to update key %d: %w", keyNum, err)
+		}
+		sdc.keys[keyNum] = newKey
+	}
+	if pos >= 0 {
+		keys[pos] = newKey
+	} else {
+		sdc.conf.Pages[page] = append(keys, newKey)
+	}
+	return keyNum, nil
 }
