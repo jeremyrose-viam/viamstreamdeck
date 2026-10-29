@@ -108,14 +108,27 @@ func TestFlatSetPageIsRejected(t *testing.T) {
 	mustErr(t, err, "pages not supported")
 }
 
-// KNOWN DIFFERENCE (listed in the release notes): before pages support,
-// Sscanf read the leading integer of a malformed reference, so "1abc"
-// addressed key 1. It is now an error, and nothing is drawn.
-func TestFlatMalformedKeyReferenceIsRejected(t *testing.T) {
+// On a flat config a reference is read with Sscanf, as it always was, so a
+// reference that starts with a number is that key number.
+func TestFlatMalformedKeyReferenceIsKeyNumber(t *testing.T) {
 	sdc, fd := newTestComponent(t, flatConfig(), "thing")
-	_, err := update(sdc, keyUpdate("1abc", map[string]interface{}{"text": "sneaky"}))
-	mustErr(t, err, "invalid key reference")
-	test.That(t, fd.button(1), test.ShouldEqual, "text:one")
+	_, err := update(sdc, keyUpdate("1abc", map[string]interface{}{"text": "leading"}))
+	test.That(t, err, test.ShouldBeNil)
+	test.That(t, fd.button(1), test.ShouldEqual, "text:leading")
+	test.That(t, sdc.conf.Keys[1].Text, test.ShouldEqual, "leading")
+}
+
+// `page` did not exist before, and unknown fields were ignored, so a flat
+// config must still accept an update that carries one.
+func TestFlatIgnoresPage(t *testing.T) {
+	sdc, fd := newTestComponent(t, flatConfig(), "thing")
+	res, err := update(sdc, map[string]interface{}{
+		"page": "anything",
+		"keys": map[string]interface{}{"0": map[string]interface{}{"text": "still works"}},
+	})
+	test.That(t, err, test.ShouldBeNil)
+	test.That(t, res, test.ShouldResemble, map[string]interface{}{"keys": []int{0}})
+	test.That(t, fd.button(0), test.ShouldEqual, "text:still works")
 }
 
 func TestFlatKeyByName(t *testing.T) {

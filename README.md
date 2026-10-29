@@ -140,10 +140,11 @@ A key can carry an optional `name` in its config. `update_display` accepts eithe
 }
 ```
 
-- A reference that is a whole number is a key number. Anything else is looked up as a name, so a key named `"4"` can only be reached as key 4.
+- With a `keys` list, a reference that starts with a number is that key number, as before, so `"4abc"` is key 4. Anything else is looked up as a name, so a name that starts with a number can't be used.
+- With `pages`, only a whole number is a key number. Anything else is looked up as a name, so `"4abc"` is an error unless a key has that name, and a key named `"4"` can only be reached as key 4.
 - Names are only looked up among the keys of the page or key list being updated, and a name used by more than one key there is an error.
 - `name` is optional and is never validated when the config loads, so it cannot make an existing config fail. It cannot be changed by `update_display`.
-- A reference that is neither a key number nor the name of a key, such as `"4abc"`, is an error.
+- A reference that is neither a key number nor the name of a key is an error.
 
 #### Updating Dials
 
@@ -317,17 +318,16 @@ With `pages` configured, `update_display` edits a page instead of the flat key l
 - The update is checked when it is sent. If any key could not be drawn, for example an unknown `image`, an unsupported `method`, a `SetPosition` key whose position doesn't exist, or a key with nothing to display, the whole update is rejected and nothing changes, instead of failing later when someone switches to that page. A key that points at a component that isn't present is not an error; it shows the crossed-circle image, as it does on every page.
 - A key can only be added to the page that is showing. Updating a key that a hidden page doesn't have is an error.
 - Updates last until the component is reconfigured, which resets the pages to the configured ones, as with flat `keys`.
-- `brightness` and `dials` apply to the whole deck. `page` only affects `keys`, and sending `page` to a config that uses `keys` instead of `pages` is an error.
+- `brightness` and `dials` apply to the whole deck. `page` only affects `keys`, and is ignored by a config that uses `keys` instead of `pages`.
 - The response is the same as for flat configs: the key numbers that were updated.
 
 #### Behavior changes
 
-A config that uses `keys` behaves as it did before. Two things are different:
+A config that uses `keys` behaves as it did before. One thing is different:
 
 | Case | Before | Now |
 | --- | --- | --- |
 | `update_display` on a config with `pages` | Added the key to a flat `keys` list, which switched the deck out of pages mode and made `set_page` fail | Edits the page and leaves pages mode alone |
-| A malformed key reference such as `"4abc"` | Read as key 4 | An error |
 
 Configs that load today still load unchanged. Every new field (`name`, and `page` on `update_display`) is optional.
 

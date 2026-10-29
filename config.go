@@ -223,10 +223,19 @@ func (c *Config) GetKeysForPage(pageName string) ([]KeyConfig, error) {
 	return keys, nil
 }
 
-// resolveKeyRef maps an update_display key reference to a key index. A whole
-// number is an index; anything else must be the name of exactly one key.
-func resolveKeyRef(ref string, keys []KeyConfig) (int, error) {
-	if n, err := strconv.Atoi(ref); err == nil {
+// resolveKeyRef maps an update_display key reference to a key index, falling
+// back to the name of exactly one key.
+//
+// On a flat `keys` config the number is read as it always was, with Sscanf, so
+// "4abc" is key 4. With `pages` the rule is strict: only a whole number is an
+// index, and "4abc" is looked up as a name.
+func resolveKeyRef(ref string, keys []KeyConfig, flat bool) (int, error) {
+	if flat {
+		var n int
+		if _, err := fmt.Sscanf(ref, "%d", &n); err == nil {
+			return n, nil
+		}
+	} else if n, err := strconv.Atoi(ref); err == nil {
 		return n, nil
 	}
 

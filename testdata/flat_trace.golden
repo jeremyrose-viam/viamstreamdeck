@@ -77,39 +77,53 @@ keys: {0 text="both" text_color="" color="" image="" component="thing" method="d
 dials: [{Dial:0 Component:thing Command:SetPosition} {Dial:1 Component:thing Command:SetPosition}]
 brightness: 20
 
+## reference that starts with a number
+result: map[keys:[1]]
+  draw 1 text:leading
+keys: {0 text="both" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="leading" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
+dials: [{Dial:0 Component:thing Command:SetPosition} {Dial:1 Component:thing Command:SetPosition}]
+brightness: 20
+
+## page sent to a flat config
+result: map[keys:[1]]
+  draw 1 text:paged?
+keys: {0 text="both" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="paged?" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
+dials: [{Dial:0 Component:thing Command:SetPosition} {Dial:1 Component:thing Command:SetPosition}]
+brightness: 20
+
 ## reject unsupported method
 error: failed to update key 0: only support DoCommand and SetPosition now, not get_readings
-keys: {0 text="both" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="one" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
+keys: {0 text="both" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="paged?" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
 dials: [{Dial:0 Component:thing Command:SetPosition} {Dial:1 Component:thing Command:SetPosition}]
 brightness: 20
 
 ## reject unknown image
 error: failed to update key 0: unknown image [nope.png]
-keys: {0 text="both" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="one" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
+keys: {0 text="both" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="paged?" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
 dials: [{Dial:0 Component:thing Command:SetPosition} {Dial:1 Component:thing Command:SetPosition}]
 brightness: 20
 
 ## reject a new key with nothing to show
 error: failed to update key 9: nothing to display for key {9 <nil> thing do_command []}
-keys: {0 text="both" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="one" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
+keys: {0 text="both" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="paged?" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
 dials: [{Dial:0 Component:thing Command:SetPosition} {Dial:1 Component:thing Command:SetPosition}]
 brightness: 20
 
 ## reject empty update
 error: no valid updates provided
-keys: {0 text="both" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="one" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
+keys: {0 text="both" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="paged?" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
 dials: [{Dial:0 Component:thing Command:SetPosition} {Dial:1 Component:thing Command:SetPosition}]
 brightness: 20
 
 ## set_page on a flat config
 error: pages not supported in this config
-keys: {0 text="both" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="one" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
+keys: {0 text="both" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="paged?" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
 dials: [{Dial:0 Component:thing Command:SetPosition} {Dial:1 Component:thing Command:SetPosition}]
 brightness: 20
 
 ## unknown command
 error: unknown command, supported commands: set_page, update_display
-keys: {0 text="both" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="one" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
+keys: {0 text="both" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="paged?" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
 dials: [{Dial:0 Component:thing Command:SetPosition} {Dial:1 Component:thing Command:SetPosition}]
 brightness: 20
 
@@ -117,12 +131,12 @@ brightness: 20
 result: map[]
   brightness 20
   draw 0 text:both
-  draw 1 text:one
+  draw 1 text:paged?
   draw 2 image+text:caption
   draw 3 text:lost
   draw 4 text:new
   draw 5 image+text:nowhere
-keys: {0 text="both" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="one" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
+keys: {0 text="both" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="paged?" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
 dials: [{Dial:0 Component:thing Command:SetPosition} {Dial:1 Component:thing Command:SetPosition}]
 brightness: 20
 

@@ -25,10 +25,9 @@ func keysString(keys []KeyConfig) string {
 // and compares everything observable (each response or error, every call made
 // to the deck, and the resulting config) with testdata/flat_trace.golden. The
 // golden file was recorded from the code before pages support, so a pass shows
-// flat configs behave identically. The one intentional difference, a malformed
-// key reference like "1abc", and the reworded error for a non-numeric one like
-// "abc", are deliberately left out of the script; paged_test.go and
-// flat_baseline_test.go cover them.
+// flat configs behave identically. The reworded error for a non-numeric
+// reference like "abc" (it is now tried as a name first) is deliberately left
+// out of the script; flat_baseline_test.go covers it.
 //
 // Regenerate with UPDATE_GOLDEN=1 only for an intentional behavior change.
 func TestFlatDifferentialTrace(t *testing.T) {
@@ -88,6 +87,11 @@ func TestFlatDifferentialTrace(t *testing.T) {
 	step("edit dial", r, err)
 	r, err = up(map[string]interface{}{"brightness": 20, "keys": map[string]interface{}{"0": map[string]interface{}{"text": "both"}}})
 	step("brightness and a key", r, err)
+
+	r, err = up(k("1abc", map[string]interface{}{"text": "leading"}))
+	step("reference that starts with a number", r, err)
+	r, err = up(map[string]interface{}{"page": "anything", "keys": map[string]interface{}{"1": map[string]interface{}{"text": "paged?"}}})
+	step("page sent to a flat config", r, err)
 
 	r, err = up(k("0", map[string]interface{}{"method": "get_readings"}))
 	step("reject unsupported method", r, err)

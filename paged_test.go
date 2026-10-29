@@ -201,13 +201,14 @@ func TestAmbiguousName(t *testing.T) {
 	mustErr(t, err, "ambiguous")
 }
 
-func TestPageOnFlatConfigIsRejected(t *testing.T) {
-	sdc, _ := newTestComponent(t, flatConfig(), "thing")
-	_, err := update(sdc, map[string]interface{}{
-		"page": "home",
-		"keys": map[string]interface{}{"0": map[string]interface{}{"text": "x"}},
-	})
-	mustErr(t, err, "pages not supported")
+// With pages the rule is strict: "4abc" is not a key number, so it is looked up
+// as a name, and no key has that name.
+func TestPagedMalformedKeyReferenceIsAnUnknownName(t *testing.T) {
+	sdc, fd := newTestComponent(t, pagedConfig(), "thing")
+	_, err := update(sdc, keyUpdate("1abc", map[string]interface{}{"text": "sneaky"}))
+	mustErr(t, err, "no key has that name")
+	test.That(t, fd.button(1), test.ShouldEqual, "text:home1")
+	test.That(t, sdc.conf.Pages["home"][1].Text, test.ShouldEqual, "home1")
 }
 
 func TestPagedMissingComponentIsCrossedCircleOnEveryPage(t *testing.T) {

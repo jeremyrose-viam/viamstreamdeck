@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"image"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -729,12 +730,10 @@ func (sdc *streamdeckComponent) keysOf(pageName string) []KeyConfig {
 }
 
 // updateTarget picks the page an update_display applies to: the named page, or
-// the one that is showing. A flat config has no pages, and is addressed as "".
+// the one that is showing. A flat config has no pages and is addressed as "";
+// a `page` sent to one is ignored, as it was before the field existed.
 func (sdc *streamdeckComponent) updateTarget(page string) (string, error) {
 	if !sdc.isPaged() {
-		if page != "" {
-			return "", fmt.Errorf("pages not supported in this config")
-		}
 		return "", nil
 	}
 	if page == "" {
@@ -796,9 +795,16 @@ func (sdc *streamdeckComponent) handleKeyUpdates(ctx context.Context, cmd Update
 		return nil
 	}
 
+	refs := make([]string, 0, len(cmd.Keys))
+	for ref := range cmd.Keys {
+		refs = append(refs, ref)
+	}
+	sort.Strings(refs) // so errors and commit order don't depend on map order
+
 	updatedKeys := []int{}
-	for ref, fields := range cmd.Keys {
-		keyNum, err := resolveKeyRef(ref, pageKeys)
+	for _, ref := range refs {
+		fields := cmd.Keys[ref]
+		keyNum, err := resolveKeyRef(ref, pageKeys, !sdc.isPaged())
 		if err != nil {
 			return nil, err
 		}
