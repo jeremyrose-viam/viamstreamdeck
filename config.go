@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 
 	"go.viam.com/rdk/logging"
@@ -11,6 +12,10 @@ import (
 
 type KeyConfig struct {
 	Key int
+
+	// Name optionally labels the key so update_display can address it without
+	// depending on its position. It is never validated at load.
+	Name string `json:"name,omitempty"`
 
 	Text      string
 	TextColor string  `json:"text_color"`
@@ -94,6 +99,7 @@ type Config struct {
 }
 
 type UpdateDisplayCommand struct {
+	Page       string                            `mapstructure:"page"`
 	Brightness *int                              `mapstructure:"brightness"`
 	Keys       map[string]map[string]interface{} `mapstructure:"keys"`
 	Dials      map[string]map[string]interface{} `mapstructure:"dials"`
@@ -215,4 +221,27 @@ func (c *Config) GetKeysForPage(pageName string) ([]KeyConfig, error) {
 		return nil, fmt.Errorf("page %s not found", pageName)
 	}
 	return keys, nil
+}
+
+// resolveKeyRef maps an update_display key reference to a key index. A whole
+// number is an index; anything else must be the name of exactly one key.
+func resolveKeyRef(ref string, keys []KeyConfig) (int, error) {
+	if n, err := strconv.Atoi(ref); err == nil {
+		return n, nil
+	}
+
+	found, count := 0, 0
+	for _, k := range keys {
+		if k.Name != "" && k.Name == ref {
+			found = k.Key
+			count++
+		}
+	}
+	switch count {
+	case 0:
+		return 0, fmt.Errorf("invalid key reference %q: not a key number, and no key has that name", ref)
+	case 1:
+		return found, nil
+	}
+	return 0, fmt.Errorf("key name %q is ambiguous: %d keys have it", ref, count)
 }

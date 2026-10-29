@@ -108,11 +108,22 @@ func TestFlatSetPageIsRejected(t *testing.T) {
 	mustErr(t, err, "pages not supported")
 }
 
-// KNOWN DIFFERENCE (flipped when pages support lands): Sscanf reads the
-// leading integer of a malformed reference, so "1abc" addresses key 1.
-func TestFlatMalformedKeyReferenceReadAsLeadingInteger(t *testing.T) {
+// KNOWN DIFFERENCE (listed in the release notes): before pages support,
+// Sscanf read the leading integer of a malformed reference, so "1abc"
+// addressed key 1. It is now an error, and nothing is drawn.
+func TestFlatMalformedKeyReferenceIsRejected(t *testing.T) {
 	sdc, fd := newTestComponent(t, flatConfig(), "thing")
 	_, err := update(sdc, keyUpdate("1abc", map[string]interface{}{"text": "sneaky"}))
+	mustErr(t, err, "invalid key reference")
+	test.That(t, fd.button(1), test.ShouldEqual, "text:one")
+}
+
+func TestFlatKeyByName(t *testing.T) {
+	conf := flatConfig()
+	conf.Keys[1].Name = "status"
+	sdc, fd := newTestComponent(t, conf, "thing")
+
+	_, err := update(sdc, keyUpdate("status", map[string]interface{}{"text": "ok"}))
 	test.That(t, err, test.ShouldBeNil)
-	test.That(t, fd.button(1), test.ShouldEqual, "text:sneaky")
+	test.That(t, fd.button(1), test.ShouldEqual, "text:ok")
 }
