@@ -531,13 +531,27 @@ func (sdc *streamdeckComponent) Name() resource.Name {
 func (sdc *streamdeckComponent) stateChecker() {
 	for sdc.closed.Load() == 0 {
 
-		err := sdc.reconfigure(context.Background(), sdc.deps, sdc.conf)
+		err := sdc.redraw(context.Background())
 		if err != nil {
 			sdc.logger.Errorf("can't reconfigure: %v", err)
 		}
 
 		time.Sleep(time.Second)
 	}
+}
+
+// redraw reapplies brightness and keys from the current config. It holds the
+// lock throughout, so it can't race with Reconfigure or update_display, and it
+// can't write back a config that was replaced while it ran.
+func (sdc *streamdeckComponent) redraw(ctx context.Context) error {
+	sdc.configLock.Lock()
+	defer sdc.configLock.Unlock()
+
+	err := sdc.updateBrightness(sdc.conf.Brightness)
+	if err != nil {
+		return err
+	}
+	return sdc.updateKeys(ctx)
 }
 
 func (sdc *streamdeckComponent) Close(ctx context.Context) error {
