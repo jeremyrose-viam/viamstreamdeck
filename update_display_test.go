@@ -295,3 +295,109 @@ func TestUpdateDisplayKeyFlatConfig(t *testing.T) {
 	test.That(t, err, test.ShouldNotBeNil)
 	test.That(t, sdc.conf.Keys[0].Text, test.ShouldEqual, "still zero")
 }
+
+// A key with no text and no image has nothing to draw, so it must be rejected on
+// a page that isn't showing, as it would fail when the page is shown. A
+// SetPosition key takes its text from the switch, so it only needs a valid
+// position argument.
+func TestUpdateDisplayKeyHiddenPageRejectsKeysWithNothingToDraw(t *testing.T) {
+	ctx := context.Background()
+
+	sdc, d := newTestComponent(pagesConfig(), "main")
+	_, err := sdc.updateDisplayKey(ctx, "Refill", "water", map[string]interface{}{"text": ""})
+	test.That(t, err, test.ShouldNotBeNil)
+	test.That(t, err.Error(), test.ShouldContainSubstring, "nothing to display")
+	test.That(t, sdc.conf.Pages["Refill"][0].Text, test.ShouldEqual, "Water")
+	test.That(t, len(d.keys), test.ShouldEqual, 0)
+
+	_, err = sdc.updateDisplayKey(ctx, "Refill", "water", map[string]interface{}{
+		"text": "", "method": "set_position", "args": []interface{}{"not a number"},
+	})
+	test.That(t, err, test.ShouldNotBeNil)
+	test.That(t, sdc.conf.Pages["Refill"][0].Text, test.ShouldEqual, "Water")
+
+	_, err = sdc.updateDisplayKey(ctx, "Refill", "water", map[string]interface{}{
+		"text": "", "method": "set_position", "args": []interface{}{float64(1)},
+	})
+	test.That(t, err, test.ShouldBeNil)
+	test.That(t, sdc.conf.Pages["Refill"][0].Method, test.ShouldEqual, "set_position")
+}
+
+// A method with an empty segment used to panic in snakeToCamel.
+func TestMethodWithEmptySegmentIsRejectedNotPanic(t *testing.T) {
+	for _, m := range []string{"do_", "_x", "_", "do__command"} {
+		test.That(t, func() { snakeToCamel(m) }, test.ShouldNotPanic)
+	}
+	test.That(t, snakeToCamel("do_command"), test.ShouldEqual, "DoCommand")
+	test.That(t, snakeToCamel("set_position"), test.ShouldEqual, "SetPosition")
+
+	sdc, _ := newTestComponent(pagesConfig(), "main")
+	_, err := sdc.updateDisplayKey(context.Background(), "Refill", "water", map[string]interface{}{"method": "do_"})
+	test.That(t, err, test.ShouldNotBeNil)
+	test.That(t, sdc.conf.Pages["Refill"][0].Method, test.ShouldEqual, "do_command")
+}
+
+// One bad key in a command rejects the whole command: the keys listed with it
+// are neither drawn nor saved, however the map happens to be ordered.
+func TestHandleUpdateDisplayIsAllOrNothing(t *testing.T) {
+	ctx := context.Background()
+
+	for i := 0; i < 30; i++ {
+		sdc, d := newTestComponent(pagesConfig(), "Refill")
+		before := append([]KeyConfig(nil), sdc.conf.Pages["Refill"]...)
+
+		_, err := sdc.handleUpdateDisplay(ctx, map[string]interface{}{
+			"keys": map[string]interface{}{
+				"water": map[string]interface{}{"text": "ok"},
+				"beans": map[string]interface{}{"method": "bogus"},
+			},
+		})
+		test.That(t, err, test.ShouldNotBeNil)
+		test.That(t, sdc.conf.Pages["Refill"], test.ShouldResemble, before)
+		test.That(t, len(d.keys), test.ShouldEqual, 0)
+	}
+
+	// The same on a flat keys list.
+	sdc, d := newTestComponent(flatConfig(), "")
+	before := append([]KeyConfig(nil), sdc.conf.Keys...)
+	_, err := sdc.handleUpdateDisplay(ctx, map[string]interface{}{
+		"keys": map[string]interface{}{
+			"0":   map[string]interface{}{"text": "ok"},
+			"abc": map[string]interface{}{"text": "no such key"},
+		},
+	})
+	test.That(t, err, test.ShouldNotBeNil)
+	test.That(t, sdc.conf.Keys, test.ShouldResemble, before)
+	test.That(t, len(d.keys), test.ShouldEqual, 0)
+
+	// Two references to one key are ambiguous, so they are rejected too.
+	sdc, d = newTestComponent(pagesConfig(), "Refill")
+	_, err = sdc.handleUpdateDisplay(ctx, map[string]interface{}{
+		"keys": map[string]interface{}{
+			"water": map[string]interface{}{"text": "a"},
+			"1":     map[string]interface{}{"text": "b"},
+		},
+	})
+	test.That(t, err, test.ShouldNotBeNil)
+	test.That(t, err.Error(), test.ShouldContainSubstring, "updated twice")
+	test.That(t, len(d.keys), test.ShouldEqual, 0)
+}
+
+// update_display decodes the page from the command, so a hidden page can be
+// updated through DoCommand's handler as well as the helper.
+func TestHandleUpdateDisplayDecodesPageAndAppliesAllKeys(t *testing.T) {
+	sdc, d := newTestComponent(pagesConfig(), "main")
+
+	res, err := sdc.handleUpdateDisplay(context.Background(), map[string]interface{}{
+		"page": "Refill",
+		"keys": map[string]interface{}{
+			"water": map[string]interface{}{"text": "Water 5", "color": "red"},
+			"beans": map[string]interface{}{"text": "Beans 2"},
+		},
+	})
+	test.That(t, err, test.ShouldBeNil)
+	test.That(t, res["keys"], test.ShouldResemble, []int{2, 1})
+	test.That(t, sdc.conf.Pages["Refill"][0].Text, test.ShouldEqual, "Water 5")
+	test.That(t, sdc.conf.Pages["Refill"][1].Text, test.ShouldEqual, "Beans 2")
+	test.That(t, len(d.keys), test.ShouldEqual, 0) // "Refill" isn't showing
+}
