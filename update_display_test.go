@@ -59,47 +59,134 @@ func newTestComponent(conf *Config, currentPage string) (*streamdeckComponent, *
 func TestLocateKey(t *testing.T) {
 	keys := pagesConfig().Pages["Refill"]
 
-	pos, num, err := locateKey(keys, "beans")
+	pos, num, err := locateKey(keys, "beans", false)
 	test.That(t, err, test.ShouldBeNil)
 	test.That(t, pos, test.ShouldEqual, 1)
 	test.That(t, num, test.ShouldEqual, 2)
 
-	pos, num, err = locateKey(keys, "1")
+	pos, num, err = locateKey(keys, "1", false)
 	test.That(t, err, test.ShouldBeNil)
 	test.That(t, pos, test.ShouldEqual, 0)
 	test.That(t, num, test.ShouldEqual, 1)
 
 	// An index with no entry yet is addressable, so a key can be added.
-	pos, num, err = locateKey(keys, "7")
+	pos, num, err = locateKey(keys, "7", false)
 	test.That(t, err, test.ShouldBeNil)
 	test.That(t, pos, test.ShouldEqual, -1)
 	test.That(t, num, test.ShouldEqual, 7)
 
-	_, _, err = locateKey(keys, "ice")
+	_, _, err = locateKey(keys, "ice", false)
 	test.That(t, err, test.ShouldNotBeNil)
 	test.That(t, err.Error(), test.ShouldContainSubstring, `no key named "ice"`)
 
 	// A name used twice can't be addressed by name.
 	dup := []KeyConfig{{Key: 3, Name: "back"}, {Key: 4, Name: "back"}}
-	_, _, err = locateKey(dup, "back")
+	_, _, err = locateKey(dup, "back", false)
 	test.That(t, err, test.ShouldNotBeNil)
 	test.That(t, err.Error(), test.ShouldContainSubstring, "more than one key")
 	// ...but each is still reachable by number.
-	pos, num, err = locateKey(dup, "4")
+	pos, num, err = locateKey(dup, "4", false)
 	test.That(t, err, test.ShouldBeNil)
 	test.That(t, pos, test.ShouldEqual, 1)
 	test.That(t, num, test.ShouldEqual, 4)
 
 	// A name that looks like a number is read as a number.
 	numeric := []KeyConfig{{Key: 9, Name: "3"}}
-	pos, num, err = locateKey(numeric, "3")
+	pos, num, err = locateKey(numeric, "3", false)
 	test.That(t, err, test.ShouldBeNil)
 	test.That(t, pos, test.ShouldEqual, -1)
 	test.That(t, num, test.ShouldEqual, 3)
 
-	// Junk that Sscanf("%d") used to accept as a number is no longer one.
-	_, _, err = locateKey(keys, "4abc")
+	// For pages, junk after a number is not a key number.
+	_, _, err = locateKey(keys, "4abc", false)
 	test.That(t, err, test.ShouldNotBeNil)
+}
+
+// A flat keys list reads a reference the way update_display always did, so
+// "4abc" is key 4. That wins over a name, which only gets references that don't
+// start with a number.
+func TestLocateKeyFlatKeepsLegacyNumbers(t *testing.T) {
+	keys := []KeyConfig{{Key: 1, Name: "one"}, {Key: 4, Name: "four"}, {Key: 5, Name: "2nd"}}
+
+	for ref, want := range map[string]int{"4": 4, "4abc": 4, "1st": 1, "07": 7} {
+		_, num, err := locateKey(keys, ref, true)
+		test.That(t, err, test.ShouldBeNil)
+		test.That(t, num, test.ShouldEqual, want)
+	}
+
+	// A name still works when it doesn't start with a number.
+	pos, num, err := locateKey(keys, "four", true)
+	test.That(t, err, test.ShouldBeNil)
+	test.That(t, pos, test.ShouldEqual, 1)
+	test.That(t, num, test.ShouldEqual, 4)
+
+	// A name that does start with a number is read as that number instead.
+	_, num, err = locateKey(keys, "2nd", true)
+	test.That(t, err, test.ShouldBeNil)
+	test.That(t, num, test.ShouldEqual, 2)
+
+	_, _, err = locateKey(keys, "abc", true)
+	test.That(t, err, test.ShouldNotBeNil)
+}
+
+// Through the handler, a flat config still takes "1abc" as key 1.
+func TestHandleUpdateDisplayFlatConfigLegacyReference(t *testing.T) {
+	sdc, d := newTestComponent(flatConfig(), "")
+
+	res, err := sdc.handleUpdateDisplay(context.Background(), map[string]interface{}{
+		"keys": map[string]interface{}{
+			"1abc": map[string]interface{}{"text": "legacy"},
+		},
+	})
+	test.That(t, err, test.ShouldBeNil)
+	test.That(t, res["keys"], test.ShouldResemble, []int{1})
+	test.That(t, sdc.conf.Keys[1].Text, test.ShouldEqual, "legacy")
+	test.That(t, len(d.keys), test.ShouldEqual, 1)
+
+	// A paged config doesn't take it.
+	sdc, _ = newTestComponent(pagesConfig(), "Refill")
+	_, err = sdc.handleUpdateDisplay(context.Background(), map[string]interface{}{
+		"keys": map[string]interface{}{"1abc": map[string]interface{}{"text": "x"}},
+	})
+	test.That(t, err, test.ShouldNotBeNil)
+}
+
+// update_display without a page follows set_page: it changes the page that is
+// showing, so the same command fails before the switch and works after it, and a
+// page keeps what it was given when you leave and come back.
+func TestSetPageThenUpdateDisplay(t *testing.T) {
+	ctx := context.Background()
+	sdc, d := newTestComponent(pagesConfig(), "main")
+	update := map[string]interface{}{
+		"keys": map[string]interface{}{"water": map[string]interface{}{"text": "Water 9", "color": "red"}},
+	}
+
+	// "water" is on the Refill page, not on the page that is showing.
+	_, err := sdc.handleUpdateDisplay(ctx, update)
+	test.That(t, err, test.ShouldNotBeNil)
+	test.That(t, err.Error(), test.ShouldContainSubstring, `no key named "water"`)
+
+	test.That(t, sdc.setPage(ctx, "Refill"), test.ShouldBeNil)
+	test.That(t, sdc.currentPage, test.ShouldEqual, "Refill")
+	test.That(t, len(d.keys), test.ShouldEqual, 2) // the page's two keys were drawn
+
+	d.keys = nil
+	_, err = sdc.handleUpdateDisplay(ctx, update)
+	test.That(t, err, test.ShouldBeNil)
+	test.That(t, len(d.keys), test.ShouldEqual, 1)
+	test.That(t, d.keys[0].Text, test.ShouldEqual, "Water 9")
+	test.That(t, sdc.conf.Pages["Refill"][0].Text, test.ShouldEqual, "Water 9")
+	test.That(t, sdc.conf.Pages["main"][0].Text, test.ShouldEqual, "Refill")
+
+	// Leaving the page and coming back shows the update.
+	test.That(t, sdc.setPage(ctx, "main"), test.ShouldBeNil)
+	_, err = sdc.handleUpdateDisplay(ctx, update)
+	test.That(t, err, test.ShouldNotBeNil)
+
+	d.keys = nil
+	test.That(t, sdc.setPage(ctx, "Refill"), test.ShouldBeNil)
+	test.That(t, len(d.keys), test.ShouldEqual, 2)
+	test.That(t, d.keys[0].Text, test.ShouldEqual, "Water 9")
 }
 
 // Key names must never stop a config that loaded before from loading: "name"

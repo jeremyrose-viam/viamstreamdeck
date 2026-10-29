@@ -293,7 +293,7 @@ func (sdc *streamdeckComponent) applyKeys(ctx context.Context, keys []KeyConfig)
 	for keyIdx := range sdc.keys {
 		if !newKeyIndices[keyIdx] {
 			// Clear this key from the display
-			err := sdc.sd.ClearBtn(keyIdx)
+			err := sdc.clearBtn(keyIdx)
 			if err != nil {
 				sdc.logger.Errorf("failed to clear key %d: %v", keyIdx, err)
 			}
@@ -304,7 +304,7 @@ func (sdc *streamdeckComponent) applyKeys(ctx context.Context, keys []KeyConfig)
 
 	// Apply all the new keys
 	for _, k := range keys {
-		err := sdc.updateKey(ctx, k)
+		err := sdc.drawKey(ctx, k)
 		if err != nil {
 			return err
 		}
@@ -580,7 +580,7 @@ func (sdc *streamdeckComponent) setPage(ctx context.Context, pageName string) er
 	}
 
 	// Clear all buttons
-	err = sdc.sd.ClearAllBtns()
+	err = sdc.clearAllBtns()
 	if err != nil {
 		return fmt.Errorf("failed to clear buttons: %w", err)
 	}
@@ -739,12 +739,33 @@ func (sdc *streamdeckComponent) drawKey(ctx context.Context, k KeyConfig) error 
 	return sdc.updateKey(ctx, k)
 }
 
+// clearBtn and clearAllBtns blank the deck. With a draw override installed, as
+// in tests, there is no deck to clear.
+func (sdc *streamdeckComponent) clearBtn(keyIdx int) error {
+	if sdc.draw != nil {
+		return nil
+	}
+	return sdc.sd.ClearBtn(keyIdx)
+}
+
+func (sdc *streamdeckComponent) clearAllBtns() error {
+	if sdc.draw != nil {
+		return nil
+	}
+	return sdc.sd.ClearAllBtns()
+}
+
 // locateKey resolves keyRef against keys. keyRef is either a key index ("4") or
 // a key name. It returns the position of the key in keys (-1 if an index has no
 // entry yet) and its key index. An unknown or ambiguous name is an error, and a
 // name that looks like a number is read as a key number.
-func locateKey(keys []KeyConfig, keyRef string) (pos int, keyNum int, err error) {
-	if n, convErr := strconv.Atoi(keyRef); convErr == nil {
+//
+// With legacyNumbers, a reference that starts with a number ("4abc") is read as
+// that key number, as update_display did before it knew about names. That keeps
+// every reference an existing flat keys config sends meaning what it meant. It
+// is off for pages, which update_display could not drive before.
+func locateKey(keys []KeyConfig, keyRef string, legacyNumbers bool) (pos int, keyNum int, err error) {
+	if n, ok := keyNumber(keyRef, legacyNumbers); ok {
 		for i := range keys {
 			if keys[i].Key == n {
 				return i, n, nil
@@ -768,6 +789,21 @@ func locateKey(keys []KeyConfig, keyRef string) (pos int, keyNum int, err error)
 	return pos, keys[pos].Key, nil
 }
 
+// keyNumber reads keyRef as a key number. With legacyNumbers it accepts what
+// fmt.Sscanf("%d") accepts, which includes a number followed by other text.
+func keyNumber(keyRef string, legacyNumbers bool) (int, bool) {
+	if n, err := strconv.Atoi(keyRef); err == nil {
+		return n, true
+	}
+	if legacyNumbers {
+		var n int
+		if _, err := fmt.Sscanf(keyRef, "%d", &n); err == nil {
+			return n, true
+		}
+	}
+	return 0, false
+}
+
 // keyPlan is a validated key update that has not been drawn or saved yet.
 type keyPlan struct {
 	flat   bool   // the update targets the flat keys list, not a page
@@ -778,46 +814,41 @@ type keyPlan struct {
 }
 
 // planKeyUpdate resolves and validates one key update from update_display
-// without drawing or saving anything. keyRef is a key index or a key name.
+// without drawing or saving anything. keyRef is a key index or a key name. The
+// caller holds configLock.
 //
-// With a pages config the update targets the page's keys (page, or the page
-// that is showing if empty), so other pages and the page set are left intact. A
-// key can only be added to the page that is showing, and an update that would
-// leave a key undrawable is rejected. With a flat keys list it targets that
-// list. The caller holds configLock.
+// With a pages config the update targets the page's keys (page, or the page that
+// is showing if empty), so other pages and the page set are left intact. A key
+// can only be added to the page that is showing, and an update that would leave
+// a key undrawable is rejected.
+//
+// A flat keys list is treated as one unnamed page that is always showing, and
+// keeps the rules update_display had before it knew about pages: page is
+// ignored, a reference that starts with a number is read as that key number, and
+// a key is not checked for drawability before it is drawn.
 func (sdc *streamdeckComponent) planKeyUpdate(page, keyRef string, updates map[string]interface{}) (keyPlan, error) {
-	if len(sdc.conf.Pages) == 0 {
-		// A flat keys list has no pages, so page is ignored, as it was before
-		// update_display knew about pages.
-		pos, keyNum, err := locateKey(sdc.conf.Keys, keyRef)
-		if err != nil {
-			return keyPlan{}, err
+	flat := len(sdc.conf.Pages) == 0
+	keys := sdc.conf.Keys
+	if flat {
+		page = ""
+	} else {
+		if page == "" {
+			page = sdc.currentPage
 		}
-
-		existingKey, hasExisting := sdc.keys[keyNum]
-		if !hasExisting {
-			existingKey = KeyConfig{Key: keyNum}
+		var ok bool
+		if keys, ok = sdc.conf.Pages[page]; !ok {
+			return keyPlan{}, fmt.Errorf("page %q not found", page)
 		}
-		newKey, err := sdc.applyKeyUpdate(existingKey, updates)
-		if err != nil {
-			return keyPlan{}, fmt.Errorf("failed to apply updates to key %d: %w", keyNum, err)
-		}
-		newKey.Key = keyNum
-		return keyPlan{flat: true, pos: pos, keyNum: keyNum, key: newKey}, nil
 	}
 
-	if page == "" {
-		page = sdc.currentPage
-	}
-	keys, ok := sdc.conf.Pages[page]
-	if !ok {
-		return keyPlan{}, fmt.Errorf("page %q not found", page)
-	}
-	pos, keyNum, err := locateKey(keys, keyRef)
+	pos, keyNum, err := locateKey(keys, keyRef, flat)
 	if err != nil {
-		return keyPlan{}, fmt.Errorf("page %q: %w", page, err)
+		if !flat {
+			err = fmt.Errorf("page %q: %w", page, err)
+		}
+		return keyPlan{}, err
 	}
-	if pos < 0 && page != sdc.currentPage {
+	if !flat && pos < 0 && page != sdc.currentPage {
 		return keyPlan{}, fmt.Errorf("page %q has no key %d: a key can only be added to the page that is showing, or in the config", page, keyNum)
 	}
 
@@ -830,42 +861,42 @@ func (sdc *streamdeckComponent) planKeyUpdate(page, keyRef string, updates map[s
 		return keyPlan{}, fmt.Errorf("failed to apply updates to key %d: %w", keyNum, err)
 	}
 	newKey.Key = keyNum
-	// A key on a page that isn't showing isn't drawn when it is saved, so check
-	// it here: a bad update left in the config would break the page, and its
-	// remaining keys, the next time someone navigates to it.
-	if err := checkDrawable(newKey); err != nil {
-		return keyPlan{}, fmt.Errorf("page %q key %d: %w", page, keyNum, err)
+
+	if !flat {
+		// A key on a page that isn't showing isn't drawn when it is saved, so
+		// check it here: a bad update left in the config would break the page,
+		// and its remaining keys, the next time someone navigates to it.
+		if err := checkDrawable(newKey); err != nil {
+			return keyPlan{}, fmt.Errorf("page %q key %d: %w", page, keyNum, err)
+		}
 	}
-	return keyPlan{page: page, pos: pos, keyNum: keyNum, key: newKey}, nil
+	return keyPlan{flat: flat, page: page, pos: pos, keyNum: keyNum, key: newKey}, nil
 }
 
 // commitKeyUpdate draws a planned key update, if its page is showing, and saves
 // it. The caller holds configLock and has planned every update of the command
 // first, so positions in the key lists are still valid.
 func (sdc *streamdeckComponent) commitKeyUpdate(ctx context.Context, p keyPlan) error {
-	if p.flat {
+	if p.flat || p.page == sdc.currentPage {
 		if err := sdc.drawKey(ctx, p.key); err != nil {
 			return fmt.Errorf("failed to update key %d: %w", p.keyNum, err)
 		}
 		sdc.keys[p.keyNum] = p.key
-		if p.pos >= 0 {
-			sdc.conf.Keys[p.pos] = p.key
-		} else {
-			sdc.conf.Keys = append(sdc.conf.Keys, p.key)
-		}
-		return nil
 	}
 
-	if p.page == sdc.currentPage {
-		if err := sdc.drawKey(ctx, p.key); err != nil {
-			return fmt.Errorf("failed to update key %d: %w", p.keyNum, err)
-		}
-		sdc.keys[p.keyNum] = p.key
+	keys := sdc.conf.Keys
+	if !p.flat {
+		keys = sdc.conf.Pages[p.page]
 	}
 	if p.pos >= 0 {
-		sdc.conf.Pages[p.page][p.pos] = p.key
+		keys[p.pos] = p.key
 	} else {
-		sdc.conf.Pages[p.page] = append(sdc.conf.Pages[p.page], p.key)
+		keys = append(keys, p.key)
+	}
+	if p.flat {
+		sdc.conf.Keys = keys
+	} else {
+		sdc.conf.Pages[p.page] = keys
 	}
 	return nil
 }

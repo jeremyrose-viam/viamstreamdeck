@@ -120,7 +120,7 @@ You can update individual keys by specifying the key number and the properties t
 
 #### Updating Keys by Name
 
-Give a key a `name` in its config and `update_display` can address it by that name instead of its position. Keep names unique within a page: if two keys on a page share a name, `update_display` reports it as ambiguous and you address them by number instead. A name that looks like a number is read as a key number. If you later move the key to a different position, nothing that sends updates has to change.
+Give a key a `name` in its config and `update_display` can address it by that name instead of its position. Keep names unique within a page: if two keys on a page share a name, `update_display` reports it as ambiguous and you address them by number instead. A name that looks like a number is read as a key number. With a `keys` list instead of pages, a reference that starts with a number (such as `"4abc"`) is read as that key number, exactly as it was before names existed. If you later move the key to a different position, nothing that sends updates has to change.
 
 ```json
 {
@@ -151,7 +151,7 @@ When the config uses [pages](#pages), `update_display` changes the page that is 
 
 Updates are made to the running configuration only. They persist until the component is reconfigured, at which point the saved config is used again. With a `keys` list instead of pages, `page` is ignored.
 
-A key can only be added to the page that is showing; on a page that isn't, you can update the keys it already has. On any page, an update that would leave a key the deck can't draw (no `component` or `method`, an unsupported `method`, an unknown `image`) is rejected. A key like that on a page that isn't showing would otherwise sit unnoticed and break the page the next time you navigate to it.
+A command that updates several keys is checked before anything is drawn: if any key reference or update in it is invalid, none of the keys change. A failure while drawing, such as an unplugged deck, can still leave the keys before it drawn. A key can only be added to the page that is showing; on a page that isn't, you can update the keys it already has. On any page, an update that would leave a key the deck can't draw (no `component` or `method`, an unsupported `method`, an unknown `image`, or no `text` and no `image`) is rejected. A key like that on a page that isn't showing would otherwise sit unnoticed and break the page the next time you navigate to it.
 
 #### Updating Dials
 
