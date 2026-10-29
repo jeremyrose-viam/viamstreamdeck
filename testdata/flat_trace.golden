@@ -1,0 +1,149 @@
+## initial draw
+result: map[]
+  draw 0 text:zero
+  draw 1 text:one
+  draw 2 image
+  draw 3 image+text:gone
+keys: {0 text="zero" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="one" text_color="white" color="red" image="" component="thing" method="do_command" args=[]} {2 text="" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="gone" method="do_command" args=[]}
+dials: [{Dial:0 Component:thing Command:DoCommand}]
+brightness: 50
+
+## edit text
+result: map[keys:[0]]
+  draw 0 text:ZERO
+keys: {0 text="ZERO" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="one" text_color="white" color="red" image="" component="thing" method="do_command" args=[]} {2 text="" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="gone" method="do_command" args=[]}
+dials: [{Dial:0 Component:thing Command:DoCommand}]
+brightness: 50
+
+## edit colors
+result: map[keys:[1]]
+  draw 1 text:one
+keys: {0 text="ZERO" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="one" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="gone" method="do_command" args=[]}
+dials: [{Dial:0 Component:thing Command:DoCommand}]
+brightness: 50
+
+## add text to an image key
+result: map[keys:[2]]
+  draw 2 image+text:caption
+keys: {0 text="ZERO" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="one" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="gone" method="do_command" args=[]}
+dials: [{Dial:0 Component:thing Command:DoCommand}]
+brightness: 50
+
+## point a missing-component key at a real one
+result: map[keys:[3]]
+  draw 3 text:lost
+keys: {0 text="ZERO" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="one" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]}
+dials: [{Dial:0 Component:thing Command:DoCommand}]
+brightness: 50
+
+## add a key
+result: map[keys:[4]]
+  draw 4 text:new
+keys: {0 text="ZERO" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="one" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]}
+dials: [{Dial:0 Component:thing Command:DoCommand}]
+brightness: 50
+
+## add a key for a missing component
+result: map[keys:[5]]
+  draw 5 image+text:nowhere
+keys: {0 text="ZERO" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="one" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
+dials: [{Dial:0 Component:thing Command:DoCommand}]
+brightness: 50
+
+## brightness
+result: map[brightness:70]
+  brightness 70
+keys: {0 text="ZERO" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="one" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
+dials: [{Dial:0 Component:thing Command:DoCommand}]
+brightness: 70
+
+## add dial
+result: map[dials:[1]]
+keys: {0 text="ZERO" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="one" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
+dials: [{Dial:0 Component:thing Command:DoCommand} {Dial:1 Component:thing Command:SetPosition}]
+brightness: 70
+
+## edit dial
+result: map[dials:[0]]
+keys: {0 text="ZERO" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="one" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
+dials: [{Dial:0 Component:thing Command:SetPosition} {Dial:1 Component:thing Command:SetPosition}]
+brightness: 70
+
+## brightness and a key
+result: map[brightness:20 keys:[0]]
+  brightness 20
+  draw 0 text:both
+keys: {0 text="both" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="one" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
+dials: [{Dial:0 Component:thing Command:SetPosition} {Dial:1 Component:thing Command:SetPosition}]
+brightness: 20
+
+## reference that starts with a number
+result: map[keys:[1]]
+  draw 1 text:leading
+keys: {0 text="both" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="leading" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
+dials: [{Dial:0 Component:thing Command:SetPosition} {Dial:1 Component:thing Command:SetPosition}]
+brightness: 20
+
+## page sent to a flat config
+result: map[keys:[1]]
+  draw 1 text:paged?
+keys: {0 text="both" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="paged?" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
+dials: [{Dial:0 Component:thing Command:SetPosition} {Dial:1 Component:thing Command:SetPosition}]
+brightness: 20
+
+## reject unsupported method
+error: failed to update key 0: only support DoCommand and SetPosition now, not get_readings
+keys: {0 text="both" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="paged?" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
+dials: [{Dial:0 Component:thing Command:SetPosition} {Dial:1 Component:thing Command:SetPosition}]
+brightness: 20
+
+## reject unknown image
+error: failed to update key 0: unknown image [nope.png]
+keys: {0 text="both" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="paged?" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
+dials: [{Dial:0 Component:thing Command:SetPosition} {Dial:1 Component:thing Command:SetPosition}]
+brightness: 20
+
+## reject a new key with nothing to show
+error: failed to update key 9: nothing to display for key {9 <nil> thing do_command []}
+keys: {0 text="both" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="paged?" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
+dials: [{Dial:0 Component:thing Command:SetPosition} {Dial:1 Component:thing Command:SetPosition}]
+brightness: 20
+
+## reject empty update
+error: no valid updates provided
+keys: {0 text="both" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="paged?" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
+dials: [{Dial:0 Component:thing Command:SetPosition} {Dial:1 Component:thing Command:SetPosition}]
+brightness: 20
+
+## set_page on a flat config
+error: pages not supported in this config
+keys: {0 text="both" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="paged?" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
+dials: [{Dial:0 Component:thing Command:SetPosition} {Dial:1 Component:thing Command:SetPosition}]
+brightness: 20
+
+## unknown command
+error: unknown command, supported commands: set_page, update_display
+keys: {0 text="both" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="paged?" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
+dials: [{Dial:0 Component:thing Command:SetPosition} {Dial:1 Component:thing Command:SetPosition}]
+brightness: 20
+
+## redraw tick
+result: map[]
+  brightness 20
+  draw 0 text:both
+  draw 1 text:paged?
+  draw 2 image+text:caption
+  draw 3 text:lost
+  draw 4 text:new
+  draw 5 image+text:nowhere
+keys: {0 text="both" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="paged?" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
+dials: [{Dial:0 Component:thing Command:SetPosition} {Dial:1 Component:thing Command:SetPosition}]
+brightness: 20
+
+## edit after a tick
+result: map[keys:[1]]
+  draw 1 text:after tick
+keys: {0 text="both" text_color="" color="" image="" component="thing" method="do_command" args=[]} {1 text="after tick" text_color="yellow" color="blue" image="" component="thing" method="do_command" args=[]} {2 text="caption" text_color="" color="" image="x.jpg" component="thing" method="do_command" args=[]} {3 text="lost" text_color="" color="" image="" component="thing" method="do_command" args=[]} {4 text="new" text_color="" color="" image="" component="thing" method="do_command" args=[map[a:1]]} {5 text="orphan" text_color="" color="" image="" component="nowhere" method="do_command" args=[]}
+dials: [{Dial:0 Component:thing Command:SetPosition} {Dial:1 Component:thing Command:SetPosition}]
+brightness: 20
+
