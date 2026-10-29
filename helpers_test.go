@@ -2,6 +2,7 @@ package viamstreamdeck
 
 import (
 	"context"
+	"fmt"
 	"image"
 	"strings"
 	"sync"
@@ -21,6 +22,7 @@ type fakeDeck struct {
 	buttons    map[int]string
 	brightness uint16
 	clearedAll int
+	ops        []string // every call in order, for before/after comparison
 }
 
 func newFakeDeck() *fakeDeck {
@@ -39,6 +41,7 @@ func (f *fakeDeck) set(idx int, what string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.buttons[idx] = what
+	f.ops = append(f.ops, fmt.Sprintf("draw %d %s", idx, what))
 	return nil
 }
 
@@ -55,6 +58,7 @@ func (f *fakeDeck) SetBrightness(b uint16) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.brightness = b
+	f.ops = append(f.ops, fmt.Sprintf("brightness %d", b))
 	return nil
 }
 
@@ -62,6 +66,7 @@ func (f *fakeDeck) ClearBtn(idx int) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	delete(f.buttons, idx)
+	f.ops = append(f.ops, fmt.Sprintf("clear %d", idx))
 	return nil
 }
 
@@ -70,6 +75,7 @@ func (f *fakeDeck) ClearAllBtns() error {
 	defer f.mu.Unlock()
 	f.buttons = map[int]string{}
 	f.clearedAll++
+	f.ops = append(f.ops, "clear all")
 	return nil
 }
 
