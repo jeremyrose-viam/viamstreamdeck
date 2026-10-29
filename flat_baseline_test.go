@@ -107,11 +107,42 @@ func TestFlatSetPageIsRejected(t *testing.T) {
 	mustErr(t, err, "pages not supported")
 }
 
-// A reference is read with Sscanf, which takes the leading integer of a
-// malformed one, so "1abc" addresses key 1.
-func TestFlatMalformedKeyReferenceReadAsLeadingInteger(t *testing.T) {
+// On a flat config a reference is read with Sscanf, as it always was, so a
+// reference that starts with a number is that key number.
+func TestFlatMalformedKeyReferenceIsKeyNumber(t *testing.T) {
 	sdc, fd := newTestComponent(t, flatConfig(), "thing")
-	_, err := update(sdc, keyUpdate("1abc", map[string]interface{}{"text": "sneaky"}))
+	_, err := update(sdc, keyUpdate("1abc", map[string]interface{}{"text": "leading"}))
 	test.That(t, err, test.ShouldBeNil)
-	test.That(t, fd.button(1), test.ShouldEqual, "text:sneaky")
+	test.That(t, fd.button(1), test.ShouldEqual, "text:leading")
+	test.That(t, sdc.conf.Keys[1].Text, test.ShouldEqual, "leading")
+}
+
+// `page` did not exist before, and unknown fields were ignored, so a flat
+// config must still accept an update that carries one.
+func TestFlatIgnoresPage(t *testing.T) {
+	sdc, fd := newTestComponent(t, flatConfig(), "thing")
+	res, err := update(sdc, map[string]interface{}{
+		"page": "anything",
+		"keys": map[string]interface{}{"0": map[string]interface{}{"text": "still works"}},
+	})
+	test.That(t, err, test.ShouldBeNil)
+	test.That(t, res, test.ShouldResemble, map[string]interface{}{"keys": []int{0}})
+	test.That(t, fd.button(0), test.ShouldEqual, "text:still works")
+}
+
+func TestFlatKeyByName(t *testing.T) {
+	conf := flatConfig()
+	conf.Keys[1].Name = "status"
+	sdc, fd := newTestComponent(t, conf, "thing")
+
+	_, err := update(sdc, keyUpdate("status", map[string]interface{}{"text": "ok"}))
+	test.That(t, err, test.ShouldBeNil)
+	test.That(t, fd.button(1), test.ShouldEqual, "text:ok")
+}
+
+// An empty method used to panic in snakeToCamel.
+func TestFlatEmptyMethodIsAnErrorNotAPanic(t *testing.T) {
+	sdc, _ := newTestComponent(t, flatConfig(), "thing")
+	_, err := update(sdc, keyUpdate("9", map[string]interface{}{"text": "x", "component": "thing"}))
+	mustErr(t, err, "only support DoCommand and SetPosition")
 }
