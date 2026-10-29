@@ -315,7 +315,7 @@ With `pages` configured, `update_display` edits a page instead of the flat key l
 ```
 
 - A change to the page that is showing is drawn immediately. A change to any other page is kept and drawn when that page is shown, so a page you can't see stays current.
-- The update is checked when it is sent. If any key could not be drawn, for example an unknown `image`, an unsupported `method`, a `SetPosition` key whose position doesn't exist, or a key with nothing to display, the whole update is rejected and nothing changes, instead of failing later when someone switches to that page. A key that points at a component that isn't present is not an error; it shows the crossed-circle image, as it does on every page.
+- The update is checked when it is sent. If any key could not be drawn, for example an unknown `image`, an unsupported `method`, a `SetPosition` key whose position doesn't exist, or a key with nothing to display, the whole update is rejected before anything is drawn or changed, instead of failing later when someone switches to that page. If the deck itself fails partway through an update, for example because it is unplugged, the keys already applied stay applied. A key that points at a component that isn't present is not an error; it shows the crossed-circle image, as it does on every page.
 - A key can only be added to the page that is showing. Updating a key that a hidden page doesn't have is an error.
 - Updates last until the component is reconfigured, which resets the pages to the configured ones, as with flat `keys`.
 - `brightness` and `dials` apply to the whole deck. `page` only affects `keys`, and is ignored by a config that uses `keys` instead of `pages`.
